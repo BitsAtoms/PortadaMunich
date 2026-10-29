@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prueba cámara Munich</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f2f2f2;
+      padding: 30px;
+    }
+    video {
+      width: 80%;
+      max-width: 700px;
+      background: black;
+      border-radius: 12px;
+    }
+    button {
+      padding: 15px 30px;
+      margin: 10px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    #status {
+      margin: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>PRUEBA CÁMARA MUNICH</h1>
+
+  <p>Selecciona la cámara y activa la previsualización.</p>
+
+  <select id="cameras"></select>
+  <button onclick="startCamera()">Activar cámara</button>
+
+  <br><br>
+
+  <video id="video" autoplay playsinline></video>
+
+  <br>
+
+  <button onclick="takePhoto()">HACER FOTO</button>
+
+  <p id="status">Esperando conexión...</p>
+  <p id="keyStatus">Pulsa cualquier tecla para detectar el teclado.</p>
+
+  <canvas id="canvas" hidden></canvas>
+
+  <script>
+    const video = document.getElementById("video");
+    const cameras = document.getElementById("cameras");
+    const canvas = document.getElementById("canvas");
+    const status = document.getElementById("status");
+
+    let stream;
+
+    async function loadCameras() {
+      try {
+        await navigator.mediaDevices.getUserMedia({
+          video: true
+        });
+
+        const devices =
+          await navigator.mediaDevices.enumerateDevices();
+
+        const videoDevices = devices.filter(
+          device => device.kind === "videoinput"
+        );
+
+        cameras.innerHTML = "";
+
+        videoDevices.forEach((device, index) => {
+          const option = document.createElement("option");
+          option.value = device.deviceId;
+          option.textContent =
+            device.label || "Cámara " + (index + 1);
+          cameras.appendChild(option);
+        });
+
+        status.textContent = "Cámaras detectadas: " +
+          videoDevices.length;
+
+        await startCamera();
+
+      } catch (error) {
+        status.textContent = "Error: " + error.message;
+      }
+    }
+
+    async function startCamera() {
+      try {
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: cameras.value
+              ? { exact: cameras.value }
+              : undefined,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        });
+
+        video.srcObject = stream;
+        status.textContent = "Cámara funcionando correctamente.";
+
+      } catch (error) {
+        status.textContent = "No se pudo activar la cámara: " +
+          error.message;
+      }
+    }
+
+    function takePhoto() {
+      if (!stream) return;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      canvas.getContext("2d").drawImage(
+        video, 0, 0, canvas.width, canvas.height
+      );
+
+      const link = document.createElement("a");
+      link.download = "foto_munich.jpg";
+      link.href = canvas.toDataURL("image/jpeg", 0.95);
+      link.click();
+
+      status.textContent = "Fotografía realizada y descargada.";
+    }
+
+       ///CONECTAR TECLADO 
+    document.addEventListener("keydown", function(event) {
+
+    const key = event.key.toLowerCase();
+
+    if (key === "a") {
+        document.getElementById("keyStatus").textContent =
+        "BOTÓN 1: PORTADA IZQUIERDA";
+
+    } else if (key === "b") {
+        document.getElementById("keyStatus").textContent =
+        "BOTÓN 2: PORTADA DERECHA";
+
+    } else if (key === "c") {
+        document.getElementById("keyStatus").textContent =
+        "BOTÓN 3: CONFIRMAR";
+
+    } else {
+        document.getElementById("keyStatus").textContent =
+        "Tecla detectada: " + event.key;
+    }
+
+    });
+
+
+
+    loadCameras();
+  </script>
+
+</body>
+</html>
